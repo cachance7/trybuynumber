@@ -4,16 +4,18 @@ var chaiAsPromised = require("chai-as-promised");
 chai.should();
 chai.use(chaiAsPromised);
 
-var VALID_UNTAKEN          = "+14105751920";         // MD phone number
+var VALID_MAGIC            = "+15005550006";         // Twilio magic number
+var VALID_UNTAKEN          = "+13027216874";         // DE phone number (as of 3/31/15)
 var VALID_TAKEN_AREA_OPEN  = "+16175425942";         // FSF phone number
 var VALID_TAKEN_AREA_FULL  = "+12128766737";         // White Castle in Manhattan
 var VALID_TAKEN_STATE_FULL = "+19073330413";         // Alaska McDonalds
 var INVALID_NUMBER         = "01189998819991197253"; // Emergency hotline
 var INVALID_COUNTRY_NUMBER = "+44(0)1604230230";     // GB phone number
 
-var tn = require("./index");//('./config.json');
+var tbn = require("./");//('./config.json');
+var tn = new tbn.TryBuyNumber("../../casey.json");
 
-describe("Twiliode", function(){
+describe("TryBuyNumber", function(){
     describe("#validateConstraints", function(){
         it("accept constraints with valid nearPhoneNumber", function(){
             return tn.validateConstraints({nearPhoneNumber: VALID_TAKEN_AREA_OPEN}).should.eventually.be.fulfilled;
@@ -51,10 +53,18 @@ describe("Twiliode", function(){
             this.timeout(15000);
             return tn.queryPhoneNumberAsync({nearPhoneNumber: VALID_TAKEN_STATE_FULL}).should.eventually.be.rejected;
         });
+    });
 
-        //it("accept valid number and purchase", function(){
-        //    this.timeout(5000);
-        //    return tn.purchasePhoneNumberAsync({nearPhoneNumber: validNumber}).should.eventually.be.fulfilled;
-        //});
+    describe("#purchasePhoneNumberAsync", function(){
+        it("purchase using Twilio magic number", function(){
+            this.timeout(15000);
+            return tn.purchasePhoneNumberAsync({nearPhoneNumber: VALID_MAGIC}, true).should.become(VALID_MAGIC);
+        });
+
+        it("accept valid number and purchase (will fail if using test credentials)", function(){
+            this.timeout(15000);
+            // NOTE: This will fail if using test credentials
+            return tn.purchasePhoneNumberAsync({nearPhoneNumber: VALID_UNTAKEN}).should.eventually.be.fulfilled;
+        });
     });
 });

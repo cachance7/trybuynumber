@@ -1,6 +1,6 @@
 {
-  "name": "twiliode",
-  "version": "0.0.0",
+  "name": "trybuynumber",
+  "version": "0.0.1",
   "description": "Phone number requisition via Twilio. ",
   "main": "index.js",
   "dependencies": {
@@ -22,12 +22,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/cachance7/twiliode"
+    "url": "https://github.com/cachance7/trybuynumber"
   },
   "author": "Casey Chance",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/cachance7/twiliode/issues"
+    "url": "https://github.com/cachance7/trybuynumber/issues"
   },
-  "homepage": "https://github.com/cachance7/twiliode"
+  "homepage": "https://github.com/cachance7/trybuynumber"
 }

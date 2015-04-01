@@ -1,8 +1,8 @@
-/** @module Twiliode */
+/** @module TryBuyNumber */
 
 // Allow for later instantiation despite singleton
-Twiliode.prototype.Twiliode = Twiliode;
-module.exports = exports = new Twiliode();
+TryBuyNumber.prototype.TryBuyNumber = TryBuyNumber;
+module.exports = exports = new TryBuyNumber();
 
 var fs = require('fs'),
     path = require('path'),
@@ -18,7 +18,7 @@ var logger = new(winston.Logger)({
             level: 'warn'
         }),
         new(winston.transports.File)({
-            filename: 'twiliode.log',
+            filename: 'TryBuyNumber.log',
             level: 'info'
         })
     ]
@@ -47,9 +47,9 @@ require('csv').parse(fs.readFileSync(__dirname + '/area-codes.csv').toString(), 
  * Engages in lazy initialization if a config is provided.
  * @param {Object} config - Will be passed to {@link init} before calls are made.
  */
-function Twiliode(config) {
-    if (!(this instanceof Twiliode)) {
-        return new Twiliode(config);
+function TryBuyNumber(config) {
+    if (!(this instanceof TryBuyNumber)) {
+        return new TryBuyNumber(config);
     }
 
     this.config = config;
@@ -60,7 +60,7 @@ function Twiliode(config) {
 }
 
 /**
- * Initializes the Twiliode instance for use.
+ * Initializes the TryBuyNumber instance for use.
  * @param {Object|string} config Either a config object or path to a config
  * json file with the data structure below.
  * <pre><code>
@@ -84,7 +84,7 @@ function Twiliode(config) {
  * @param {string} config.creds.buy.sid - Twilio Sid
  * @param {string} config.creds.buy.token - Twilio Auth Token
  */
-Twiliode.prototype.init = function(config){
+TryBuyNumber.prototype.init = function(config){
     if ((typeof config) === 'string') {
         this.config = require(path.resolve(config));
         config = this.config;
@@ -95,8 +95,7 @@ Twiliode.prototype.init = function(config){
         config.creds.buy   = config.creds.buy   || {};
     }
 
-    console.log(config);
-    logger.info("Twiliode created with config");
+    logger.info("TryBuyNumber created with config");
     logger.info(config);
 
     // If these credentials aren't provided, Twilio API will default to env vars:
@@ -106,8 +105,11 @@ Twiliode.prototype.init = function(config){
     this.isInitialized = true;
 };
 
-Twiliode.prototype._ensureInit = function(){
-    console.log(this);
+/**
+ * Helps perform the lazy init.
+ * @private
+ */
+TryBuyNumber.prototype._ensureInit = function(){
     if(!this.isInitialized){
         this.init(this.config);
     }
@@ -125,7 +127,7 @@ Twiliode.prototype._ensureInit = function(){
  *      }</code></pre>
  *      if succcess; rejects with Error if constraints are unacceptable.
  */
-Twiliode.prototype.validateConstraints = function(constraints) {
+TryBuyNumber.prototype.validateConstraints = function(constraints) {
     this._ensureInit();
 
     var err;
@@ -177,7 +179,7 @@ Twiliode.prototype.validateConstraints = function(constraints) {
  * @returns {Promise} - Fulfills to an available number {string} if successful;
  * rejects with Error otherwise.
  */
-Twiliode.prototype.queryPhoneNumberAsync = function(constraints) {
+TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints) {
     this._ensureInit();
 
     var self = this;
@@ -209,24 +211,42 @@ Twiliode.prototype.queryPhoneNumberAsync = function(constraints) {
  * @returns {Promise} Fulfills to purchased number {string} if successful;
  * rejects with Error otherwise.
  */
-Twiliode.prototype.purchasePhoneNumberAsync = function(constraints) {
+TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints, bypassQuery) {
     this._ensureInit();
 
     var self = this;
-    return this.queryPhoneNumberAsync(constraints)
-        .then(function(number) {
-            // There's a race condition here. If the number we want
-            // gets snatched up before buying, then this next call
-            // will fail.
-            return self.buyClient.incomingPhoneNumbers.create({
-                phoneNumber: number
-            });
+    if(bypassQuery){
+        return self.buyClient.incomingPhoneNumbers.create({
+            phoneNumber: constraints.nearPhoneNumber
         })
-        .catch(function(e) {
-            err = "purchasePhoneNumberAsync failed with rejected promise from queryPhoneNumberAsync";
-            logger.error(err);
-            return when.reject(new Error(err, e));
+        .then(function(number){
+            logger.info(number);
+            return when(number.phone_number);
+        })
+        .catch(function(e){
+            err = new Error(JSON.stringify(e));
+            logger.error(e.message);
+            return when.reject(err);
         });
+    } else {
+        return this.queryPhoneNumberAsync(constraints)
+            .then(function(number) {
+                // There's a race condition here. If the number we want
+                // gets snatched up before buying, then this next call
+                // will fail.
+                return self.buyClient.incomingPhoneNumbers.create({
+                    phoneNumber: number
+                })
+                .then(function(num){
+                    return when(num.phone_number);
+                });
+            })
+            .catch(function(e) {
+                err = new Error(JSON.stringify(e));
+                logger.error(e.message);
+                return when.reject(err);
+            });
+    }
 };
 
 function maybeUseAreaCode(client, country, area_code, data) {
@@ -297,7 +317,7 @@ function maybeExtractNumber(data) {
     logger.info(data);
     if (data && data.available_phone_numbers && data.available_phone_numbers.length > 0) {
         logger.info("Suitable number found: " + data.available_phone_numbers[0].phone_number);
-        return when(data.available_phone_numbers[0]);
+        return when(data.available_phone_numbers[0].phone_number);
     } else {
         err = "No suitable number available";
         logger.error(err);
