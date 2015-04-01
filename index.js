@@ -186,14 +186,8 @@ TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints) {
     return this.validateConstraints(constraints)
         .then(function(numberAndCode) {
             //logger.info(numberAndCode);
-            logger.info("Trying phone number " + numberAndCode.number);
-            return self.queryClient.availablePhoneNumbers(numberAndCode.code).local.get({
-                    contains: numberAndCode.number,
-                    excludeAllAddressRequired: "false",
-                    excludeLocalAddressRequired: "false",
-                    excludeForeignAddressRequired: "false"
-                })
-                .then(maybeUseAreaCode.bind(null, self.queryClient, numberAndCode.code, numberAndCode.area_code))
+            logger.info("Looking for  phone number similar to " + numberAndCode.number);
+            return maybeUseAreaCode(self.queryClient, numberAndCode.code, numberAndCode.area_code)
                 .then(maybeUseState.bind(null, self.queryClient, numberAndCode.code, numberAndCode.state))
                 .then(maybeExtractNumber)
         })
@@ -249,13 +243,8 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints, bypassQu
     }
 };
 
-function maybeUseAreaCode(client, country, area_code, data) {
-    //logger.info(data);
-    if (data && data.available_phone_numbers && data.available_phone_numbers.length > 0) {
-        // Desired number was available; return it
-        logger.info("Skipping area code");
-        return when(data); //.available_phone_numbers[0].phone_number);
-    } else if (!client) {
+function maybeUseAreaCode(client, country, area_code) {
+    if (!client) {
         err = "maybeUseAreaCode requires 'client' argument";
         logger.error(err);
         return when.reject(new Error(err));
