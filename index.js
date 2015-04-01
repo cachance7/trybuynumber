@@ -1,4 +1,4 @@
-/** @module TryBuyNumber */
+/** @module trybuynumber */
 
 // Allow for later instantiation despite singleton
 TryBuyNumber.prototype.TryBuyNumber = TryBuyNumber;
