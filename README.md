@@ -65,7 +65,7 @@ Config file format below:
 Notes
 ---
 
-Though Twilio test credentials will authenticate, do not expect them to work for purchasing a number. Unless it is one of the "magic numbers", the calls will always fail with a Twilio API error code.
+Though Twilio test credentials will authenticate, do not expect them to work for purchasing a number. Unless it is one of the "[magic numbers](https://www.twilio.com/docs/api/rest/test-credentials)", the purchase call with test credentials will always fail with a Twilio API error code.
 
 Documentation
 ---
