@@ -1,6 +1,6 @@
 {
   "name": "trybuynumber",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Phone number requisition via Twilio. ",
   "main": "index.js",
   "dependencies": {
