@@ -224,7 +224,7 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints, bypassQu
             return when(number.phone_number);
         })
         .catch(function(e){
-            err = new Error(JSON.stringify(e));
+            err = new Error(e.message);
             logger.error(e.message);
             return when.reject(err);
         });
@@ -242,7 +242,7 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints, bypassQu
                 });
             })
             .catch(function(e) {
-                err = new Error(JSON.stringify(e));
+                err = new Error(e.message);
                 logger.error(e.message);
                 return when.reject(err);
             });
