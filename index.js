@@ -179,7 +179,7 @@ TryBuyNumber.prototype.validateConstraints = function(constraints) {
  * @returns {Promise} - Fulfills to an available number {string} if successful;
  * rejects with Error otherwise.
  */
-TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints) {
+TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints, skipAreaCode) {
     this._ensureInit();
 
     var self = this;
@@ -187,9 +187,14 @@ TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints) {
         .then(function(numberAndCode) {
             //logger.info(numberAndCode);
             logger.info("Looking for  phone number similar to " + numberAndCode.number);
-            return maybeUseAreaCode(self.queryClient, numberAndCode.code, numberAndCode.area_code)
-                .then(maybeUseState.bind(null, self.queryClient, numberAndCode.code, numberAndCode.state))
-                .then(maybeExtractNumber)
+            if(skipAreaCode){
+                return maybeUseState(self.queryClient, numberAndCode.code, numberAndCode.state)
+                    .then(maybeExtractNumber)
+            } else {
+                return maybeUseAreaCode(self.queryClient, numberAndCode.code, numberAndCode.area_code)
+                    .then(maybeUseState.bind(null, self.queryClient, numberAndCode.code, numberAndCode.state))
+                    .then(maybeExtractNumber)
+            }
         })
         .catch(function(e) {
             err = "Error querying Twilio: " + e.message;
@@ -205,13 +210,13 @@ TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints) {
  * @returns {Promise} Fulfills to purchased number {string} if successful;
  * rejects with Error otherwise.
  */
-TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints, bypassQuery) {
+TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints) {
     this._ensureInit();
 
     var self = this;
-    if(bypassQuery){
+    if(constraints.exactPhoneNumber){
         return self.buyClient.incomingPhoneNumbers.create({
-            phoneNumber: constraints.nearPhoneNumber
+            phoneNumber: constraints.exactPhoneNumber
         })
         .then(function(number){
             logger.info(number);
@@ -223,16 +228,28 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints, bypassQu
             return when.reject(err);
         });
     } else {
-        return this.queryPhoneNumberAsync(constraints)
-            .then(function(number) {
-                // There's a race condition here. If the number we want
-                // gets snatched up before buying, then this next call
-                // will fail.
+        // First step: get area code
+        return this.validateConstraints(constraints)
+            .then(function(numberAndCode){
+                // Next: attempt to buy in same area code
                 return self.buyClient.incomingPhoneNumbers.create({
-                    phoneNumber: number
+                    areaCode: numberAndCode.area_code
                 })
-                .then(function(num){
-                    return when(num.phone_number);
+                .then(function(number){
+                    return when(number.phone_number);
+                })
+                .catch(function(err){
+                    // If area code is full, query for one in same state
+                    return self.queryPhoneNumberAsync(constraints, true)
+                        .then(function(availableNumber){
+                            // Now buy that available number
+                            return self.buyClient.incomingPhoneNumbers.create({
+                                phoneNumber: availableNumber
+                            })
+                            .then(function(number){
+                                return when(number.phone_number);
+                            })
+                        });
                 });
             })
             .catch(function(e) {

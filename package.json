@@ -1,6 +1,6 @@
 {
   "name": "trybuynumber",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Phone number acquisition via Twilio. ",
   "main": "index.js",
   "dependencies": {

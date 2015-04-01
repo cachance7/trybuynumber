@@ -4,6 +4,7 @@ var chaiAsPromised = require("chai-as-promised");
 chai.should();
 chai.use(chaiAsPromised);
 
+var VALID_TAKEN_MAGIC      = "+15005550000";         // Twilio magic number unavailable
 var VALID_MAGIC            = "+15005550006";         // Twilio magic number
 var VALID_UNTAKEN          = "+13027216874";         // DE phone number (as of 3/31/15)
 var VALID_TAKEN_AREA_OPEN  = "+16175425942";         // FSF phone number
@@ -56,12 +57,18 @@ describe("TryBuyNumber", function(){
     });
 
     describe("#purchasePhoneNumberAsync", function(){
-        it("purchase using Twilio magic number", function(){
+        it("directly purchase using Twilio magic number", function(){
             this.timeout(15000);
-            return tn.purchasePhoneNumberAsync({nearPhoneNumber: VALID_MAGIC}, true).should.become(VALID_MAGIC);
+            return tn.purchasePhoneNumberAsync({exactPhoneNumber: VALID_MAGIC}).should.become(VALID_MAGIC);
         });
 
-        it("accept valid number and purchase (will fail if using test credentials)", function(){
+        it("purchase near using Twilio taken magic number ", function(){
+            this.timeout(15000);
+            // NOTE: This will fail if using test credentials
+            return tn.purchasePhoneNumberAsync({nearPhoneNumber: VALID_TAKEN_MAGIC}).should.eventually.be.fulfilled;
+        });
+
+        it("purchase near valid number using Twilio (will fail if using test credentials)", function(){
             this.timeout(15000);
             // NOTE: This will fail if using test credentials
             return tn.purchasePhoneNumberAsync({nearPhoneNumber: VALID_UNTAKEN}).should.eventually.be.fulfilled;
