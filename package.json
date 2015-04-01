@@ -1,7 +1,7 @@
 {
   "name": "trybuynumber",
-  "version": "0.0.2",
-  "description": "Phone number requisition via Twilio. ",
+  "version": "0.0.3",
+  "description": "Phone number acquisition via Twilio. ",
   "main": "index.js",
   "dependencies": {
     "csv": "^0.4.1",
