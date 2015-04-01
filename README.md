@@ -1,7 +1,7 @@
 TryBuyNumber
 ===
 
-Simple [Twilio](https://www.twilio.com)-backed US phone number acquisition module.
+Simple [Twilio](https://www.twilio.com)-backed US phone number acquisition module using Promises.
 
 Attempts to acquire a phone number similar to one specfied according to the following rules:
 
@@ -30,7 +30,7 @@ tbn.purchasePhoneNumberAsync({nearPhoneNumber: '+16196210102'})
 
 ```
 
-Alternatively, you can specify the path to a JSON config file which specifies multiple sets of credentials.
+Alternatively, you can specify the path to a JSON config file which contains different sets of credentials.
 
 ```
 var trybuynumber = require('trybuynumber');
@@ -61,3 +61,14 @@ Config file format below:
     }
 }
 ```
+
+Notes
+---
+
+Though Twilio test credentials will authenticate, do not expect them to work for purchasing a number. Unless it is one of the "magic numbers", the calls will always fail with a Twilio API error code.
+
+Documentation
+---
+
+The generated class documentation can be found [here](http://www.caseychance.com/trybuynumber/).
+

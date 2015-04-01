@@ -45,7 +45,7 @@ require('csv').parse(fs.readFileSync(__dirname + '/area-codes.csv').toString(), 
  * Interacts with the Twilio API to acquire a US phone number (E.164)
  * similar to one provided.
  * Engages in lazy initialization if a config is provided.
- * @param {Object} config - Will be passed to {@link init} before calls are made.
+ * @param {Object|string} config - Will be passed to {@link init} before calls are made.
  */
 function TryBuyNumber(config) {
     if (!(this instanceof TryBuyNumber)) {
