@@ -239,9 +239,9 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints) {
             logger.info(number);
             return when(number.phone_number);
         })
-        .catch(function(e){
+        .catch(function(e){  // Twilio does not reject Promises with Error
             logger.error(e.message);
-            return when.reject(e);
+            return when.reject(new Error(e.message));
         });
     } else {
         // First step: get area code
@@ -254,8 +254,8 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints) {
                 .then(function(number){
                     return when(number.phone_number);
                 })
-                .catch(function(err){ // Twilio doesn't promise with Error
-                    if(err.code === "21452") { // This is the 'No phone numbers found in area code' error
+                .catch(function(errStatus){ // Twilio doesn't reject promise with Error
+                    if(errStatus.code === "21452") { // This is the 'No phone numbers found in area code' error
                         // If area code is full, query for one in same state
                         return self.queryPhoneNumberAsync(constraints, true)
                             .then(function(availableNumber){
@@ -269,7 +269,7 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints) {
                             });
                     } else {
                         // Twilio doesn't reject Promises with Error so wrap it up
-                        return when.reject(new Error(err.message));
+                        return when.reject(new Error(errStatus.message));
                     }
                 });
             })
