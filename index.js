@@ -1,43 +1,46 @@
 /** @module trybuynumber */
 
+"use strict";
+
 // Allow for later instantiation despite singleton
 TryBuyNumber.prototype.TryBuyNumber = TryBuyNumber;
 module.exports = exports = new TryBuyNumber();
 
-var fs = require('fs'),
-    path = require('path'),
-    phone = require('node-phonenumber'),
-    e164 = require('e164'),
-    when = require('when'),
-    winston = require('winston'),
-    twilio = require('twilio');
+var fs = require("fs"),
+    path = require("path"),
+    phone = require("node-phonenumber"),
+    e164 = require("e164"),
+    when = require("when"),
+    nodefn = require("when/node"),
+    winston = require("winston"),
+    twilio = require("twilio");
 
 var logger = new(winston.Logger)({
     transports: [
         new(winston.transports.Console)({
-            level: 'warn'
+            level: "warn"
         }),
         new(winston.transports.File)({
-            filename: 'TryBuyNumber.log',
-            level: 'info'
+            filename: "TryBuyNumber.log",
+            level: "info"
         })
     ]
 });
 
 // Squelch console output when used as a module
-if (require.main != module) {
+if (require.main !== module) {
     logger.transports.console.silent = true;
 }
 
 var phoneUtil = phone.PhoneNumberUtil.getInstance();
 
-var area_codes;
+var areaCodes;
 // Need these before we begin
-require('csv').parse(fs.readFileSync(__dirname + '/area-codes.csv').toString(), {
-    columns: ['area_code', 'state'],
-    objname: 'area_code'
+require("csv").parse(fs.readFileSync(__dirname + "/area-codes.csv").toString(), {
+    columns: ["areaCode", "state"],
+    objname: "areaCode"
 }, function(err, output) {
-    area_codes = output;
+    areaCodes = output;
 });
 
 /**
@@ -53,10 +56,10 @@ function TryBuyNumber(config) {
     }
 
     this.config = config;
-    if((typeof this.config) === 'string'){
+    if((typeof this.config) === "string"){
         this.config = path.resolve(this.config);
     }
-    this.isInitialized = false;  // We'll initialize later
+    this.isInitialized = false;  // We"ll initialize later
 }
 
 /**
@@ -85,33 +88,33 @@ function TryBuyNumber(config) {
  * @param {string} config.creds.buy.token - Twilio Auth Token
  */
 TryBuyNumber.prototype.init = function(config){
-    if ((typeof config) === 'string') {
-        this.config = require(path.resolve(config));
-        config = this.config;
+    var self = this;
+    if ((typeof config) === "string") {
+        return nodefn.call(fs.readFile, path.resolve(config))
+            .then(function(cfg){
+                return when(initInternal(cfg));
+            })
+            .catch(function(err) {
+                return when.reject(err);
+            });
     } else {
-        this.config        = config = config    || {};
-        config.creds       = config.creds       || {};
-        config.creds.query = config.creds.query || {};
-        config.creds.buy   = config.creds.buy   || {};
+        return when(initInternal(config));
     }
 
-    logger.info("TryBuyNumber created with config");
-    logger.info(config);
+    function initInternal(cfg){
+        cfg             = cfg             || {};
+        cfg.creds       = cfg.creds       || {};
+        cfg.creds.query = cfg.creds.query || {};
+        cfg.creds.buy   = cfg.creds.buy   || {};
 
-    // If these credentials aren't provided, Twilio API will default to env vars:
-    // TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN
-    this.queryClient = new twilio.RestClient(config.creds.query.sid, config.creds.query.token);
-    this.buyClient   = new twilio.RestClient(config.creds.buy.sid,   config.creds.buy.token);
-    this.isInitialized = true;
-};
+        logger.info("TryBuyNumber created with config");
+        logger.info(cfg);
 
-/**
- * Helps perform the lazy init.
- * @private
- */
-TryBuyNumber.prototype._ensureInit = function(){
-    if(!this.isInitialized){
-        this.init(this.config);
+        // If these credentials aren"t provided, Twilio API will default to env vars:
+        // TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN
+        self.queryClient = new twilio.RestClient(cfg.creds.query.sid, cfg.creds.query.token);
+        self.buyClient   = new twilio.RestClient(cfg.creds.buy.sid,   cfg.creds.buy.token);
+        self.isInitialized = true;
     }
 };
 
@@ -128,8 +131,6 @@ TryBuyNumber.prototype._ensureInit = function(){
  *      if succcess; rejects with Error if constraints are unacceptable.
  */
 TryBuyNumber.prototype.validateConstraints = function(constraints) {
-    this._ensureInit();
-
     var err;
 
     // Fast fail for falsy input
@@ -144,12 +145,12 @@ TryBuyNumber.prototype.validateConstraints = function(constraints) {
     } catch (ex) {
         err = "Provided number was invalid: " + constraints.nearPhoneNumber;
         logger.error(err);
-        return when.reject(new Error(err));
+        return when.reject(ex);
     }
 
     // Make sure the number resolves to a country
-    var numberE164 = phoneUtil.format(normalized, phone.PhoneNumberFormat.E164)
-    var country = e164.lookup(numberE164.substring(1)); //e164 doesn't like '+'
+    var numberE164 = phoneUtil.format(normalized, phone.PhoneNumberFormat.E164);
+    var country = e164.lookup(numberE164.substring(1)); //e164 doesn"t like "+"
     if (!country) {
         err = "No country code for number: " + constraints.nearPhoneNumber;
         logger.error(err);
@@ -157,18 +158,19 @@ TryBuyNumber.prototype.validateConstraints = function(constraints) {
     }
 
     // Enforce the US assumption
-    if (country.code !== 'US') {
-        err = "Configured to only handle US numbers; number: " + constraints.nearPhoneNumber + ", code: " + country.code;
+    if (country.code !== "US") {
+        err = "Configured to only handle US numbers; number: " + constraints.nearPhoneNumber +
+            ", code: " + country.code;
         logger.error(err);
         return when.reject(new Error(err));
     }
-    var area_code = phoneUtil.format(normalized).split('-')[0];
+    var areaCode = phoneUtil.format(normalized).split("-")[0];
 
     return when({
         number: numberE164,
         code: country.code,
-        area_code: area_code,
-        state: area_codes[area_code].state
+        areaCode: areaCode,
+        state: areaCodes[areaCode].state
     });
 };
 
@@ -180,26 +182,33 @@ TryBuyNumber.prototype.validateConstraints = function(constraints) {
  * rejects with Error otherwise.
  */
 TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints, skipAreaCode) {
-    this._ensureInit();
-
     var self = this;
+    if(!this.isInitialized){
+        return this.init(this.config)
+            .then(function(){
+                return self.queryPhoneNumberAsync.apply(self, arguments);
+            })
+            .catch(function(err) {
+                return when.reject(err);
+            });
+    }
+
     return this.validateConstraints(constraints)
         .then(function(numberAndCode) {
             //logger.info(numberAndCode);
             logger.info("Looking for  phone number similar to " + numberAndCode.number);
             if(skipAreaCode){
-                return maybeUseState(self.queryClient, numberAndCode.code, numberAndCode.state)
-                    .then(maybeExtractNumber)
+                return requestNumberUsingState(self.queryClient, numberAndCode.code, numberAndCode.state)
+                    .then(getNumberFromData);
             } else {
-                return maybeUseAreaCode(self.queryClient, numberAndCode.code, numberAndCode.area_code)
-                    .then(maybeUseState.bind(null, self.queryClient, numberAndCode.code, numberAndCode.state))
-                    .then(maybeExtractNumber)
+                return requestNumberUsingAreaCode(self.queryClient, numberAndCode.code, numberAndCode.areaCode)
+                    .then(requestNumberUsingState.bind(null, self.queryClient, numberAndCode.code, numberAndCode.state))
+                    .then(getNumberFromData);
             }
         })
         .catch(function(e) {
-            err = "Error querying Twilio: " + e.message;
-            logger.error(err);
-            return when.reject(new Error(err, e));
+            logger.error(e);
+            return when.reject(e);
         });
 };
 
@@ -211,9 +220,17 @@ TryBuyNumber.prototype.queryPhoneNumberAsync = function(constraints, skipAreaCod
  * rejects with Error otherwise.
  */
 TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints) {
-    this._ensureInit();
-
     var self = this;
+    if(!this.isInitialized){
+        return this.init(this.config)
+            .then(function(){
+                return self.purchasePhoneNumberAsync.apply(self, arguments);
+            })
+            .catch(function(err) {
+                return when.reject(err);
+            });
+    }
+
     if(constraints.exactPhoneNumber){
         return self.buyClient.incomingPhoneNumbers.create({
             phoneNumber: constraints.exactPhoneNumber
@@ -223,9 +240,8 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints) {
             return when(number.phone_number);
         })
         .catch(function(e){
-            err = new Error(e.message);
             logger.error(e.message);
-            return when.reject(err);
+            return when.reject(e);
         });
     } else {
         // First step: get area code
@@ -233,34 +249,39 @@ TryBuyNumber.prototype.purchasePhoneNumberAsync = function(constraints) {
             .then(function(numberAndCode){
                 // Next: attempt to buy in same area code
                 return self.buyClient.incomingPhoneNumbers.create({
-                    areaCode: numberAndCode.area_code
+                    areaCode: numberAndCode.areaCode
                 })
                 .then(function(number){
                     return when(number.phone_number);
                 })
-                .catch(function(err){
-                    // If area code is full, query for one in same state
-                    return self.queryPhoneNumberAsync(constraints, true)
-                        .then(function(availableNumber){
-                            // Now buy that available number
-                            return self.buyClient.incomingPhoneNumbers.create({
-                                phoneNumber: availableNumber
-                            })
-                            .then(function(number){
-                                return when(number.phone_number);
-                            })
-                        });
+                .catch(function(err){ // Twilio doesn't promise with Error
+                    if(err.code === "21452") { // This is the 'No phone numbers found in area code' error
+                        // If area code is full, query for one in same state
+                        return self.queryPhoneNumberAsync(constraints, true)
+                            .then(function(availableNumber){
+                                // Now buy that available number
+                                return self.buyClient.incomingPhoneNumbers.create({
+                                    phoneNumber: availableNumber
+                                })
+                                .then(function(number){
+                                    return when(number.phone_number);
+                                });
+                            });
+                    } else {
+                        // Twilio doesn't reject Promises with Error so wrap it up
+                        return when.reject(new Error(err.message));
+                    }
                 });
             })
             .catch(function(e) {
-                err = new Error(e.message);
                 logger.error(e.message);
-                return when.reject(err);
+                return when.reject(e);
             });
     }
 };
 
-function maybeUseAreaCode(client, country, area_code) {
+function requestNumberUsingAreaCode(client, country, areaCode) {
+    var err;
     if (!client) {
         err = "maybeUseAreaCode requires 'client' argument";
         logger.error(err);
@@ -270,28 +291,33 @@ function maybeUseAreaCode(client, country, area_code) {
         logger.error(err);
         return when.reject(new Error(err));
     } else {
-        if (area_code) {
-            logger.info("Trying area code " + area_code);
+        if (areaCode) {
+            logger.info("Trying area code " + areaCode);
             //logger.info("Number not available: " + numberAndCode.number);
             // Desired number was not available; try for same area code
             return client.availablePhoneNumbers(country).local.get({
-                areaCode: area_code,
+                areaCode: areaCode,
                 excludeAllAddressRequired: "false",
                 excludeLocalAddressRequired: "false",
                 excludeForeignAddressRequired: "false"
+            })
+            .catch(function(errStatus){ // Twilio doesn't reject Promises with Error
+                return when.reject(new Error(errStatus.message));
             });
         } else {
-            err = "maybeUseAreaCode requires 'area_code' argument";
+            err = "maybeUseAreaCode requires 'areaCode' argument";
             logger.error(err);
             return when.reject(new Error(err));
         }
     }
 }
 
-function maybeUseState(client, country, state, data) {
+function requestNumberUsingState(client, country, state, data) {
+    var err;
     if (data && data.available_phone_numbers && data.available_phone_numbers.length > 0) {
         logger.info("Skipping state");
-        //logger.info("Suitable number found for area code " + area_code + "; " + data.available_phone_numbers[0].phone_number);
+        //logger.info("Suitable number found for area code " + areaCode + "; " +
+        //  data.available_phone_numbers[0].phone_number);
         return when(data); //.available_phone_numbers[0].phone_number);
     } else if (!client) {
         err = "maybeUseState requires 'client' argument";
@@ -302,7 +328,7 @@ function maybeUseState(client, country, state, data) {
         logger.error(err);
         return when.reject(new Error(err));
     } else {
-        //logger.info("No numbers available for area code " + area_code);
+        //logger.info("No numbers available for area code " + areaCode);
         logger.info("Trying state " + state);
         if (state) {
             return client.availablePhoneNumbers(country).local.get({
@@ -310,6 +336,9 @@ function maybeUseState(client, country, state, data) {
                 excludeAllAddressRequired: "false",
                 excludeLocalAddressRequired: "false",
                 excludeForeignAddressRequired: "false"
+            })
+            .catch(function(errStatus){ // Twilio doesn't reject Promises with Error
+                return when.reject(new Error(errStatus.message));
             });
         } else {
             err = "maybeUseState requires 'state' argument";
@@ -319,7 +348,8 @@ function maybeUseState(client, country, state, data) {
     }
 }
 
-function maybeExtractNumber(data) {
+function getNumberFromData(data) {
+    var err;
     logger.info(data);
     if (data && data.available_phone_numbers && data.available_phone_numbers.length > 0) {
         logger.info("Suitable number found: " + data.available_phone_numbers[0].phone_number);
