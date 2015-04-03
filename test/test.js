@@ -10,7 +10,7 @@ var INVALID_NUMBER         = "01189998819991197253"; // Emergency hotline
 var INVALID_COUNTRY_NUMBER = "+44(0)1604230230";     // GB phone number
 
 var tbn = require("../index.js");
-var config, tn, skipApiTests;
+var config, tn, skipApiTests, skipLivePurchase;
 try {
     var fs = require("fs");
     var assert = require("assert");
@@ -30,6 +30,9 @@ try {
     if(!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)){
         console.warn("No config file found or Twilio environment variables set -- skipping API tests");
         skipApiTests = true;
+    } else if(process.env.TWILIO_TEST_ACCOUNT_SID && process.env.TWILIO_TEST_AUTH_TOKEN){
+        console.log("Twilio test credentials detected: skipping final purchase test");
+        skipLivePurchase = true;
     } else {
         console.log("Using Twilio environment variables in tests");
     }
@@ -101,7 +104,7 @@ describe("TryBuyNumber", function(){
         });
 
         it("purchase near valid number using Twilio (will fail if using test credentials)", function(){
-            if(skipApiTests) return this.skip();
+            if(skipApiTests || skipLivePurchase) return this.skip();
 
             this.timeout(15000);
             // NOTE: This will fail if using test credentials
