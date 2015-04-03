@@ -1,4 +1,4 @@
-TryBuyNumber
+TryBuyNumber  [![Build Status](https://travis-ci.org/cachance7/trybuynumber.svg?branch=master)](https://travis-ci.org/cachance7/trybuynumber)
 ===
 
 Simple [Twilio](https://www.twilio.com)-backed US phone number acquisition module using Promises.

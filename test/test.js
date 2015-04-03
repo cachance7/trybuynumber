@@ -33,6 +33,7 @@ try {
     } else {
         console.log("Using Twilio environment variables in tests");
     }
+    tn = tbn;
 }
 
 
