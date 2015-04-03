@@ -36,7 +36,6 @@ try {
     tn = tbn;
 }
 
-
 describe("TryBuyNumber", function(){
     describe("#validateConstraints", function(){
         it("accept constraints with valid nearPhoneNumber", function(){

@@ -110,10 +110,15 @@ TryBuyNumber.prototype.init = function(config){
         logger.info("TryBuyNumber created with config");
         logger.info(cfg);
 
-        // If these credentials aren"t provided, Twilio API will default to env vars:
+        // If these credentials aren't provided, Twilio API will default to env vars:
         // TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN
         self.queryClient = new twilio.RestClient(cfg.creds.query.sid, cfg.creds.query.token);
-        self.buyClient   = new twilio.RestClient(cfg.creds.buy.sid,   cfg.creds.buy.token);
+
+        // TWILIO_TEST_ACCOUNT_SID, TWILIO_TEST_AUTH_TOKEN
+        self.buyClient   = new twilio.RestClient(
+                cfg.creds.buy.sid || process.env.TWILIO_TEST_ACCOUNT_SID,
+                cfg.creds.buy.token || process.env.TWILIO_TEST_AUTH_TOKEN);
+
         self.isInitialized = true;
     }
 };
