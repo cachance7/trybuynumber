@@ -27,7 +27,7 @@ try {
         throw ex;
     }
 
-    if(!(process.env.TWILIO_USER_ACCOUNT && process.env.TWILIO_AUTH_TOKEN)){
+    if(!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)){
         console.warn("No config file found or Twilio environment variables set -- skipping API tests");
         skipApiTests = true;
     } else {
